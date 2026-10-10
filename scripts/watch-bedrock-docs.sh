@@ -6,6 +6,19 @@ set -Eeuo pipefail
 : "${GH_TOKEN:?Defina GH_TOKEN}"
 : "${GH_REPO:?Defina GH_REPO no formato owner/repo}"
 
+# O fork herdado do PMMP pode ter Issues desativado.
+# Sem Issues o monitor nao consegue notificar sobre releases novas.
+issues_enabled="$(gh api "repos/$GH_REPO" --jq '.has_issues')"
+if [[ "$issues_enabled" != "true" ]]; then
+  message="GitHub Issues está desativado para $GH_REPO. Habilite em Settings > General > Features > Issues antes de ativar o monitor."
+  echo "::error::$message" >&2
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    echo "### LegaxCore: monitor Bedrock bloqueado" >> "$GITHUB_STEP_SUMMARY"
+    echo "$message" >> "$GITHUB_STEP_SUMMARY"
+  fi
+  exit 1
+fi
+
 tag="$(gh api repos/Mojang/bedrock-protocol-docs/releases/latest --jq '.tag_name')"
 if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.-]+)?$ ]]; then
   echo "Tag da Mojang inesperada: $tag" >&2
