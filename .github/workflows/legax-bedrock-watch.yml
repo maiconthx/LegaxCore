@@ -1,0 +1,29 @@
+name: LegaxCore - Monitorar docs Bedrock
+
+# ATENCAO: GitHub so executa cron e disponibiliza workflow_dispatch
+# normalmente em workflows presentes na branch DEFAULT do repositorio.
+# A branch default herdada e 'stable'. Para habilitar o monitoramento,
+# altere default para 'legaxcore/stable' quando terminar de homologar.
+on:
+  schedule:
+    - cron: '17 10 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: bedrock-release-monitor
+  cancel-in-progress: false
+
+jobs:
+  latest-mojang-protocol:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verificar novo release oficial Bedrock Docs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: bash scripts/watch-bedrock-docs.sh

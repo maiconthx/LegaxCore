@@ -26,6 +26,10 @@ jobs:
       - uses: actions/checkout@v6
       - name: Verificar baseline
         run: python3 tools/verify_legax_baseline.py .
+      - name: Verificar dependencias Bedrock fixadas
+        run: python3 tools/check_protocol_dependencies.py .
+      - name: Testar detector de drift de dependencias
+        run: python3 -m unittest discover -s tests/legaxcore -p 'test_*.py' -v
 
   static-and-unit:
     name: PHPStan e PHPUnit
