@@ -1,0 +1,18 @@
+{
+  "project": "LegaxCore",
+  "legaxcore_version": "0.1.0",
+  "phase": 1,
+  "upstream": {
+    "repository": "https://github.com/pmmp/PocketMine-MP",
+    "tag": "5.44.3",
+    "engine_version": "5.44.3"
+  },
+  "minecraft_bedrock": {
+    "supported_display_version": "1.26.30",
+    "status": "baseline_original",
+    "note": "Versões posteriores ainda não validadas"
+  },
+  "pocketmine_plugin_api_major": 5,
+  "engine_renamed_in_source": false,
+  "production_approved": false
+}

@@ -1,0 +1,108 @@
+name: LegaxCore - CI e PHAR
+
+on:
+  push:
+    branches:
+      - 'legaxcore/**'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - 'legaxcore/stable'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legax-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  baseline:
+    name: Identidade e dependencias
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verificar baseline
+        run: python3 tools/verify_legax_baseline.py .
+
+  static-and-unit:
+    name: PHPStan e PHPUnit
+    needs: baseline
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: PHP PMMP 8.2
+        run: bash scripts/install-php-ci.sh
+      - name: Instalar pacotes Composer
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: PHPStan
+        run: ./vendor/bin/phpstan analyze --no-progress --memory-limit=2G
+      - name: PHPUnit
+        run: ./vendor/bin/phpunit --bootstrap vendor/autoload.php --fail-on-warning tests/phpunit
+
+  integration:
+    name: Integracao com plugins de teste
+    needs: baseline
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: PHP PMMP 8.2
+        run: bash scripts/install-php-ci.sh
+      - name: Pacotes de producao
+        run: composer install --no-dev --prefer-dist --no-interaction --no-progress
+      - name: Testes de integracao oficiais
+        run: bash tests/travis.sh -t4
+
+  build:
+    name: Compilar PHAR
+    needs: baseline
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: PHP PMMP 8.2
+        run: bash scripts/install-php-ci.sh
+      - name: Pacotes de producao
+        run: composer install --no-dev --classmap-authoritative --prefer-dist --no-interaction --no-progress
+      - name: Gerar LegaxCore.phar
+        run: |
+          php -dphar.readonly=0 build/server-phar.php --git="$GITHUB_SHA" --out="LegaxCore.phar"
+          php -r 'new Phar("LegaxCore.phar"); echo "PHAR OK\n";'
+          sha256sum LegaxCore.phar > LegaxCore.phar.sha256
+      - name: Artefatos da build
+        uses: actions/upload-artifact@v7
+        with:
+          name: legaxcore-${{ github.sha }}
+          path: |
+            LegaxCore.phar
+            LegaxCore.phar.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Criar RASCUNHO de release
+    needs: [baseline, static-and-unit, integration, build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar PHAR testado
+        uses: actions/download-artifact@v8
+        with:
+          name: legaxcore-${{ github.sha }}
+          path: .
+      - name: Gerar draft no GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" LegaxCore.phar LegaxCore.phar.sha256 \
+            --verify-tag --title "LegaxCore $TAG" \
+            --draft --generate-notes
