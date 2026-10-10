@@ -39,3 +39,11 @@ Cada fork deve partir do commit declarado no manifesto para reproduzir a depende
 
 Documentacao da Mojang: https://github.com/Mojang/bedrock-protocol-docs
 A documentacao possui termos proprios: referencia-la ou comparar metadados nao concede permissao irrestrita para redistribuir os JSONs.
+
+## Habilitacao obrigatoria no GitHub
+
+1. Em `https://github.com/maiconthx/LegaxCore/settings` ative **Issues** em Settings → General → Features.
+2. Confira `legaxcore/stable` e os workflows antes de mudar a branch padrao de `stable` para `legaxcore/stable`.
+3. Confirme que o Action possui `issues: write`, execute o monitor e verifique que cria apenas uma issue para cada nova tag.
+4. Nao desative o erro de configuracao: o workflow falha explicitamente se Issues estiver desligado, para evitar falsa impressao de monitoramento ativo.
+
